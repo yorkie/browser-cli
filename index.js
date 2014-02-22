@@ -11,10 +11,11 @@ function clear() {
 
 function getStatusString(status) {
   switch(status) {
+    case -1: return 'error';
     case 0: return 'none';
-    case 1: return 'requesting';
-    case 2: return 'done';
-    case 3: return 'error';
+    case 1: return 'request';
+    case 2: return 'parse';
+    case 3: return 'render';
   }
 }
 
@@ -23,8 +24,8 @@ function Window(option) {
   this.status = 0;
   this.depth = 0;
   this.document = {};
+  this.trace = [];
   this.cursor = this.document;
-  this.prev = this.document;
 
   // Just for debugging
   this.rli = repl.start('>');
@@ -37,9 +38,13 @@ Window.prototype.request = function(url) {
   this.status = 1;
   this._render();
   request(this.url, function(error, response, body) {
-    self.status = response.statusCode === 200 ? 2 : 3;
+    self.status = response.statusCode === 200 ? 2 : -1;
     self._render()._parse(body);
-    console.log(JSON.stringify(self.document,null,2));
+
+    self.title = self.document.html.head.title.value.slice(0, 50)+'...';
+    self.body  = self.document.html.body;
+    self._render();
+    console.log(JSON.stringify(self.document, null,2));
   });
 };
 
@@ -48,43 +53,51 @@ Window.prototype._parse = function(content) {
   var handler = new htmlparser.DefaultHandler(function(err, dom) {
     dom.forEach(parseDomNode);
     function parseDomNode(node) {
-      // Real parsing...
-      if (node.type === 'tag') {
-        self.cursor[node.name] = {};
-      } else if (node.type === 'text') {
-        //console.log(node);
-      } else {
+      // break branch
+      if (node.type !== 'tag') {
+        if (node.type === 'text') self.cursor.value = node.data;
         return;
       }
 
-      // Just for iterating...
+      self.cursor[node.name] = {};
       if (node.children) {
-        self.depth++;
-        self.prev = self.cursor;
+        self.trace.push(self.cursor);console.log(self.trace.length);
         self.cursor = self.cursor[node.name];
 
         if (typeof node.children.forEach === 'function')
           node.children.forEach(parseDomNode);
         else
           parseDomNode(node.children);
-        
-        self.depth--;
-        self.cursor = self.prev;
+
+        self.cursor = self.trace.pop();
       }
     }
 
   });
   var parser = new htmlparser.Parser(handler);
   parser.parseComplete(content);
+  self.status = 3;
 };
 
 Window.prototype.render =
 Window.prototype._render = function() {
   clear();
-  if (this.status < 2) {
-    console.log(util.format(' \033[90murl %s\033[0m', this.url));
-  } else if (this.status === 2) {
-    console.log(util.format(' \033[36murl %s\033[0m', this.url));
+  switch (this.status) {
+    case -1:
+    case 0:
+    case 1:
+      console.log(util.format(' \033[90murl: %s\033[0m', this.url));
+      break;
+    case 2:
+      console.log(util.format(' \033[36murl: %s\033[0m', this.url));
+      break;
+    case 3:
+      console.log(util.format(' \033[36murl: %s\033[0m', this.url));
+      console.log(util.format(' \033[36mtitle:\033[0m \033[90m%s\033[0m', this.title));
+      console.log(util.format(' \033[90m%s\033[0m', '=============================='));
+      break;
+    default:
+      console.log('Null');
   }
   return this;
 };
