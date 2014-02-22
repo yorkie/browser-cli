@@ -22,7 +22,7 @@ function getStatusString(status) {
 function Window(option) {
   this.option = option;
   this.status = 0;
-  this.depth = 0;
+  this.tagid = 0;
   this.document = {};
   this.trace = [];
   this.cursor = this.document;
@@ -41,6 +41,7 @@ Window.prototype.request = function(url) {
     self.status = response.statusCode === 200 ? 2 : -1;
     self._render()._parse(body);
 
+    console.log(self.document);
     self.title = self.document.html.head.title.value.slice(0, 50)+'...';
     self.body  = self.document.html.body;
     self._render();
@@ -59,9 +60,13 @@ Window.prototype._parse = function(content) {
         return;
       }
 
+      if (!/html|head|title|body/i.test(node.name)) {
+        node.name = util.format('%s_%d', node.name, self.tagid++);
+      }
+
       self.cursor[node.name] = {};
       if (node.children) {
-        self.trace.push(self.cursor);console.log(self.trace.length);
+        self.trace.push(self.cursor);
         self.cursor = self.cursor[node.name];
 
         if (typeof node.children.forEach === 'function')
