@@ -16,7 +16,8 @@
     "shell"
   ],
   "dependencies": {
-    "request": "*"
+    "request": "*",
+    "htmlparser": "*"
   },
   "devDependencies": {
     "tape": "*"

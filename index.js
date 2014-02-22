@@ -1,6 +1,7 @@
 
 var util = require('util');
 var request = require('request');
+var htmlparser = require('htmlparser');
 var EventEmitter = require('events').EventEmitter;
 var repl = require('repl');
 
@@ -33,8 +34,26 @@ Window.prototype.request = function(url) {
   this._render();
   request(this.url, function(error, response, body) {
     self.status = response.statusCode === 200 ? 2 : 3;
-    self._render();
+    self._render()._parse(body);
   });
+};
+
+Window.prototype._parse = function(content) {
+  var handler = new htmlparser.DefaultHandler(function(err, dom) {
+    dom.forEach(parseDomNode);
+    function parseDomNode(node) {
+      console.log(node);
+      if (node.children) {
+        if (typeof node.children.forEach === 'function')
+          node.children.forEach(parseDomNode);
+        else
+          parseDomNode(node.children);
+      }
+    }
+
+  });
+  var parser = new htmlparser.Parser(handler);
+  parser.parseComplete(content);
 };
 
 Window.prototype.render =
@@ -45,6 +64,7 @@ Window.prototype._render = function() {
   } else if (this.status === 2) {
     console.log(util.format(' \033[36murl %s\033[0m', this.url));
   }
+  return this;
 };
 
 exports.Window = Window;
