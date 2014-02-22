@@ -7,6 +7,9 @@
     "test": "tape test/*.js",
     "demo": "node demo"
   },
+  "bin": {
+    "browse": "bin/browse"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/yorkie/browser-cli.git"
@@ -17,7 +20,8 @@
   ],
   "dependencies": {
     "request": "*",
-    "htmlparser": "*"
+    "htmlparser": "*",
+    "minimist": "*"
   },
   "devDependencies": {
     "tape": "*"

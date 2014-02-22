@@ -1,0 +1,15 @@
+#!/usr/bin/env node
+
+var Window = require('../').Window;
+var argv = require('minimist')(process.argv.slice(2));
+
+var url = argv._[0];
+if (!url) {
+  console.log('\nUsage: browse [url]\n');
+  process.exit();
+}
+
+var win = new Window();
+win.on('ready', function() {
+  win.request(url);
+});

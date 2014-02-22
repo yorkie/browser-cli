@@ -3,7 +3,7 @@ var util = require('util');
 var request = require('request');
 var htmlparser = require('htmlparser');
 var EventEmitter = require('events').EventEmitter;
-var repl = require('repl');
+var exec = require('child_process').exec;
 
 function clear() {
   console.log('\033[2J\033[0f');
@@ -23,14 +23,26 @@ function Window(option) {
   this.option = option;
   this.status = 0;
   this.tagid = 0;
-  this.document = {};
+  this.lines = 0;
+  this.document = {
+    all: []
+  };
   this.trace = [];
   this.cursor = this.document;
+  this._init();
 
   // Just for debugging
-  this.rli = repl.start('>');
+  //this.rli = repl.start('>');
 }
 util.inherits(Window, EventEmitter);
+
+Window.prototype._init = function() {
+  var self = this;
+  exec('tput lines', function(err, stdout, stderr) {
+    self.maxLines = Number(stdout);
+    self.emit('ready');
+  });
+};
 
 Window.prototype.request = function(url) {
   var self = this;
@@ -41,11 +53,9 @@ Window.prototype.request = function(url) {
     self.status = response.statusCode === 200 ? 2 : -1;
     self._render()._parse(body);
 
-    console.log(self.document);
     self.title = self.document.html.head.title.value.slice(0, 50)+'...';
     self.body  = self.document.html.body;
     self._render();
-    console.log(JSON.stringify(self.document, null,2));
   });
 };
 
@@ -56,18 +66,24 @@ Window.prototype._parse = function(content) {
     function parseDomNode(node) {
       // break branch
       if (node.type !== 'tag') {
-        if (node.type === 'text') self.cursor.value = node.data;
+        if (node.type === 'text') {
+          self.cursor.value = node.data;
+          self.document.all.push(node);
+        }
         return;
       }
 
+      var name = node.name;
       if (!/html|head|title|body/i.test(node.name)) {
-        node.name = util.format('%s_%d', node.name, self.tagid++);
+        name = util.format('%s_%d', node.name, self.tagid++);
       }
 
-      self.cursor[node.name] = {};
+      self.cursor[name] = {};
+      self.document.all.push(node);
+
       if (node.children) {
         self.trace.push(self.cursor);
-        self.cursor = self.cursor[node.name];
+        self.cursor = self.cursor[name];
 
         if (typeof node.children.forEach === 'function')
           node.children.forEach(parseDomNode);
@@ -100,6 +116,26 @@ Window.prototype._render = function() {
       console.log(util.format(' \033[36murl: %s\033[0m', this.url));
       console.log(util.format(' \033[36mtitle:\033[0m \033[90m%s\033[0m', this.title));
       console.log(util.format(' \033[90m%s\033[0m', '=============================='));
+      
+      var result = '';
+      var self = this;
+      var coll = this.document.all;
+      for (var i=0; i<coll.length; i++) {
+        var node = coll[i];
+        if (node.type === 'text') {
+          var text = node.data.replace(/&nbsp;/g, ' ');
+          text = text.replace(/&lt;/g, '<');
+          text = text.replace(/&gt;/g, '>');
+          result += text.trim();
+        } else if (/p/i.test(node.name)) {
+          if (self.lines++ >= self.maxLines) {
+            break;
+          } else {
+            result += '\n';
+          }
+        }
+      }
+      console.log(result);
       break;
     default:
       console.log('Null');

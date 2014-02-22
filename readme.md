@@ -10,9 +10,14 @@ $ npm install -g browser-cli
 ```
 
 Usage
+----------------
 ```sh
-browser-cli
+$ browse [url]
 ```
+
+Demo
+-----------------
+![demo](/demo.png)
 
 Run tests
 ---------------
