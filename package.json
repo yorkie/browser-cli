@@ -4,7 +4,8 @@
   "description": "html render in your shell",
   "main": "index.js",
   "scripts": {
-    "test": "tape test/*.js"
+    "test": "tape test/*.js",
+    "demo": "node demo"
   },
   "repository": {
     "type": "git",
@@ -14,6 +15,12 @@
     "browser",
     "shell"
   ],
+  "dependencies": {
+    "request": "*"
+  },
+  "devDependencies": {
+    "tape": "*"
+  },
   "author": "Yorkie Neil <yorkiefixer@gmail.com>",
   "license": "MIT",
   "bugs": {
