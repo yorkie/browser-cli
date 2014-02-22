@@ -21,6 +21,10 @@ function getStatusString(status) {
 function Window(option) {
   this.option = option;
   this.status = 0;
+  this.depth = 0;
+  this.document = {};
+  this.cursor = this.document;
+  this.prev = this.document;
 
   // Just for debugging
   this.rli = repl.start('>');
@@ -35,19 +39,37 @@ Window.prototype.request = function(url) {
   request(this.url, function(error, response, body) {
     self.status = response.statusCode === 200 ? 2 : 3;
     self._render()._parse(body);
+    console.log(JSON.stringify(self.document,null,2));
   });
 };
 
 Window.prototype._parse = function(content) {
+  var self = this;
   var handler = new htmlparser.DefaultHandler(function(err, dom) {
     dom.forEach(parseDomNode);
     function parseDomNode(node) {
-      console.log(node);
+      // Real parsing...
+      if (node.type === 'tag') {
+        self.cursor[node.name] = {};
+      } else if (node.type === 'text') {
+        //console.log(node);
+      } else {
+        return;
+      }
+
+      // Just for iterating...
       if (node.children) {
+        self.depth++;
+        self.prev = self.cursor;
+        self.cursor = self.cursor[node.name];
+
         if (typeof node.children.forEach === 'function')
           node.children.forEach(parseDomNode);
         else
           parseDomNode(node.children);
+        
+        self.depth--;
+        self.cursor = self.prev;
       }
     }
 
