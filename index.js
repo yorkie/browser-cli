@@ -20,6 +20,7 @@ function getStatusString(status) {
 }
 
 function Window(option) {
+  Eventmitter.call(this);
   this.option = option;
   this.status = 0;
   this.tagid = 0;
